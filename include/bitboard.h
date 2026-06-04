@@ -13,10 +13,10 @@ void print_bitboard(U64 bitboard);
 
 
 // pre computed since they don't depend on the board position
-extern U64 knight_moves[64];
-extern U64 king_moves[64];
+extern U64 knight_attacks[64];
+extern U64 king_attacks[64];
 
-void init_leapers(); // initialize the knight_moves and king_moves arrays
+void init_leapers(); // initialize the knight_attacks and king_attacks arrays
 
 
 // ----- magic bitboards stuff ------

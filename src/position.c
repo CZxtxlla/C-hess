@@ -1,8 +1,22 @@
 #include "../include/position.h"
 #include "../include/types.h"
 #include "../include/bitboard.h"
+#include "../include/magic.h"
+#include "../include/movegen.h"
 #include <stdio.h>
 #include <string.h>
+
+// Castling rights update array (64 squares)
+const int castling_rights_update[64] = {
+    13, 15, 15, 15, 12, 15, 15, 14,  // Rank 1: A1 (13), E1 (12), H1 (14)
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+    15, 15, 15, 15, 15, 15, 15, 15,
+     7, 15, 15, 15,  3, 15, 15, 11   // Rank 8: A8 (7), E8 (3), H8 (11)
+};
 
 int char_to_piece(char c) {
     // takes character and converts it to corresponding int value
@@ -73,11 +87,11 @@ void parse_fen(Position* pos, const char* fen) {
     }
     ptr++; // skip the space
 
-    // en passant square
+    // en passant square (file then rank in FEN, ranks are 1-based)
     if (*ptr != '-') {
         int file = ptr[0] - 'a';
-        int rank = ptr[1] - '0';
-        pos->en_passant = file * 8 + rank;
+        int rank = ptr[1] - '1';
+        pos->en_passant = rank * 8 + file;
         ptr +=2;
     } else {
         ptr++;
@@ -121,6 +135,50 @@ void print_board(const Position* pos) {
     printf("  En Passant:    %s\n", (pos->en_passant == -1) ? "none" : "active");
 }
 
+int is_square_attacked(int square, int attacker_side, const Position* pos) {
+    U64 a_file = 0x0101010101010101ULL;
+    U64 h_file = 0x8080808080808080ULL;
+
+    // attacked by pawns? (pretend pawn on square and see if it attacks enemy pawn)
+    if (attacker_side == WHITE) {
+        if (((1ULL << square) >> 7) & ~a_file & pos->pieces[P]) {
+            return 1;
+        }
+        if (((1ULL << square) >> 9) & ~h_file & pos->pieces[P]) {
+            return 1;
+        }
+    } else {
+        if (((1ULL << square) << 7) & ~h_file & pos->pieces[p]) {
+            return 1;
+        }
+        if (((1ULL << square) << 9) & ~a_file & pos->pieces[p]) {
+            return 1;
+        }
+    }
+
+    // attacked by knights? (pretend knight is on square and see if it hits the enemy knights)
+    U64 enemy_knights = (attacker_side == WHITE) ? pos->pieces[N] : pos->pieces[n];
+    if (knight_attacks[square] & enemy_knights) return 1;
+    
+    // attacked by kings? (pretend king is on square and see if it hits the enemy king)
+    U64 enemy_king = (attacker_side == WHITE) ? pos->pieces[K] : pos->pieces[k];
+    if (king_attacks[square] & enemy_king) return 1;
+    
+    // attacked by bishops or queens? (pretend bishop on square and see if it hits an enemy bishop)
+    U64 enemy_bishops_queens = (attacker_side == WHITE) ? (pos->pieces[B] | pos->pieces[Q]) : (pos->pieces[b] | pos->pieces[q]);
+    if (get_bishop_attacks(square, pos->occupancy[BOTH]) & enemy_bishops_queens) {
+        return 1;
+    }
+
+    // attacked by rooks or queens? (pretend rook on square and see if it hits an enemy rook)
+    U64 enemy_rooks_queens = (attacker_side == WHITE) ? (pos->pieces[R] | pos->pieces[Q]) : (pos->pieces[r] | pos->pieces[q]);
+    if (get_rook_attacks(square, pos->occupancy[BOTH]) & enemy_rooks_queens) {
+        return 1;
+    }
+
+    return 0; // not attacked
+}
+
 
 int make_move(Position* pos, int move) {
     Position backup = *pos; // backup in case move is illegal and need to revert
@@ -145,17 +203,82 @@ int make_move(Position* pos, int move) {
     for (int p_type = P; p_type <= k; p_type++) {
         pop_bit(pos->pieces[p_type], to_sq);
     }
-
+    // move the piece
     pop_bit(pos->pieces[moving_piece], from_sq);
     set_bit(pos->pieces[moving_piece], to_sq);
 
-    // handle promotion
+    // special cases
+    if (is_ep) {
+        // handle en passant
+        int captured_pawn_sq = (pos->side == WHITE) ? (to_sq - 8) : (to_sq + 8);
+        int captured_pawn = (pos->side == WHITE) ? p : P;
+        pop_bit(pos->pieces[captured_pawn], captured_pawn_sq); 
 
-    // handle en passant
+    } else if (promoted) {
+        // handle promotion: remove pawn of moving side, add promoted piece
+        if (pos->side == WHITE) {
+            pop_bit(pos->pieces[P], to_sq);
+        } else {
+            pop_bit(pos->pieces[p], to_sq);
+        }
+        set_bit(pos->pieces[promoted], to_sq);
 
-    // handle double move
+    } else if (is_castling) {
+        // handle castle
+        if (to_sq == G1) {
+            // white kingside
+            pop_bit(pos->pieces[R], H1);
+            set_bit(pos->pieces[R], F1);
+        } else if (to_sq == C1) {
+            // white queenside
+            pop_bit(pos->pieces[R], A1); 
+            set_bit(pos->pieces[R], D1);
+        } else if (to_sq == G8) {
+            // black kingside
+            pop_bit(pos->pieces[r], H8); 
+            set_bit(pos->pieces[r], F8);
+        } else if (to_sq == C8) {
+            // black queenside
+            pop_bit(pos->pieces[r], A8); 
+            set_bit(pos->pieces[r], D8);
+        }
+    }
 
-    // handle castling
+    if (is_double) {
+        pos->en_passant = (pos->side == WHITE) ? (to_sq - 8) : (to_sq + 8);
+    } else {
+        pos->en_passant = -1;
+    }  
+    // update castling rights on squares touched
+    pos->castling_rights &= castling_rights_update[from_sq];
+    pos->castling_rights &= castling_rights_update[to_sq];
 
+    // recalculate occupancy
+
+    pos->occupancy[WHITE] = 0ULL;
+    pos->occupancy[BLACK] = 0ULL;
+    
+    for (int p_type = P; p_type <= K; p_type++) {
+        pos->occupancy[WHITE] |= pos->pieces[p_type];
+    }
+    for (int p_type = p; p_type <= k; p_type++) {
+        pos->occupancy[BLACK] |= pos->pieces[p_type];
+    }
+    pos->occupancy[BOTH] = pos->occupancy[WHITE] | pos->occupancy[BLACK];
+
+    pos->side ^= 1; // change turns
+
+    // check if the move left the king in check (then it's illegal)
+
+    int king_type = (pos->side == WHITE) ? k : K;
+    int king_sq = __builtin_ctzll(pos->pieces[king_type]);
+
+    if (is_square_attacked(king_sq, pos->side, pos)) {
+        // illegal move
+        *pos = backup;
+        return 0;
+    }
+
+    // legal move
     return 1;
 }

@@ -64,7 +64,7 @@ void init_sliders() {
 
         bishop_masks[square] = mask_bishop_attacks(square);
         int b_bits = __builtin_popcountll(bishop_masks[square]);
-        int b_perm = (1 << r_bits); // 2^r_bits;
+        int b_perm = (1 << b_bits); // 2^b_bits;
 
         for (int i = 0; i < b_perm; i++) {
             U64 occ = set_occupancy(i, b_bits, bishop_masks[square]);
@@ -80,21 +80,27 @@ void init_sliders() {
 
 // super fast O(1) table lookups
 U64 get_rook_attacks(int square, U64 occupancy) {
+    /*
     U64 relevant_occupancy = occupancy & rook_masks[square];
 
     int r_bits = __builtin_popcountll(rook_masks[square]);
     int magic_index = (relevant_occupancy * rook_magics[square]) >> (64 - r_bits);
 
     return rook_attacks[square][magic_index];
+    */
+   return rook_attacks_cast(square, occupancy);
 }
 
 U64 get_bishop_attacks(int square, U64 occupancy) {
+    /*
     U64 relevant_occupancy = occupancy & bishop_masks[square];
 
     int b_bits = __builtin_popcountll(bishop_masks[square]);
     int magic_index = (relevant_occupancy * bishop_magics[square]) >> (64 - b_bits);
-
+    
     return bishop_attacks[square][magic_index];
+    */
+   return bishop_attacks_cast(square, occupancy);
 }
 
 U64 get_queen_attacks(int square, U64 occupancy) {

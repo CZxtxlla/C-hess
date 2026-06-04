@@ -1,6 +1,7 @@
 #include "../include/movegen.h"
 #include "../include/bitboard.h"
 #include "../include/magic.h"
+#include "../include/position.h"
 #include <stdio.h>
 
 // debugging helper to print encoded moves
@@ -210,7 +211,7 @@ void generate_moves(const Position* pos, MoveList* list) {
     while(knights) {
         int from_sq = __builtin_ctzll(knights);
 
-        U64 attacks = knight_moves[from_sq] & ~friendly_occupancy;
+        U64 attacks = knight_attacks[from_sq] & ~friendly_occupancy;
 
         while (attacks) {
             int to_sq = __builtin_ctzll(attacks);
@@ -226,7 +227,7 @@ void generate_moves(const Position* pos, MoveList* list) {
     while(kings) {
         int from_sq = __builtin_ctzll(kings);
 
-        U64 attacks = king_moves[from_sq] & ~friendly_occupancy;
+        U64 attacks = king_attacks[from_sq] & ~friendly_occupancy;
 
         while (attacks) {
             int to_sq = __builtin_ctzll(attacks);
@@ -234,6 +235,47 @@ void generate_moves(const Position* pos, MoveList* list) {
             pop_bit(attacks, to_sq);
         }
         pop_bit(kings, from_sq);
+    }
+
+    // castling
+
+    if (pos->side == WHITE) {
+        if (pos->castling_rights & WK) {
+            // check if F1, G1 empty
+            if (!(pos->occupancy[BOTH] & 0x60ULL)) {
+                // check if F1, E1 are not attacked
+                if (!is_square_attacked(E1, BLACK, pos) && !is_square_attacked(F1, BLACK, pos)) {
+                    addMove(list, encode_move(E1, G1, 0, 0, 0, 1));
+                }
+            }
+        }
+        if (pos->castling_rights & WQ) {
+            // check if B1, C1, D1 empty
+            if (!(pos->occupancy[BOTH] & 0x0EULL)) {
+                // check if E1, D1 are not attacked
+                if (!is_square_attacked(E1, BLACK, pos) && !is_square_attacked(D1, BLACK, pos)) {
+                    addMove(list, encode_move(E1, C1, 0, 0, 0, 1));
+                }
+            }
+        }
+    } else {
+        if (pos->castling_rights & BK) {
+            // check if F8 and G8 empty
+            if (!(pos->occupancy[BOTH] & 0x6000000000000000ULL)) {
+                if (!is_square_attacked(E8, WHITE, pos) && !is_square_attacked(F8, WHITE, pos)) {
+                    addMove(list, encode_move(E8, G8, 0, 0, 0, 1));
+                }
+            }
+        }
+        if (pos->castling_rights & BQ) {
+            // check if B8, C8, and D8 empty
+            if (!(pos->occupancy[BOTH] & 0x0E00000000000000ULL)) {
+                if (!is_square_attacked(E8, WHITE, pos) && !is_square_attacked(D8, WHITE, pos)) {
+                    addMove(list, encode_move(E8, C8, 0, 0, 0, 1));
+                }
+            }
+        }
+
     }
 
     // bishops

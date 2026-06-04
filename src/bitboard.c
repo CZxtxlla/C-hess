@@ -1,8 +1,8 @@
 #include "../include/bitboard.h"
 #include <stdio.h>
 
-U64 knight_moves[64];
-U64 king_moves[64];
+U64 knight_attacks[64];
+U64 king_attacks[64];
 
 U64 not_a_file = 0xFEFEFEFEFEFEFEFEULL;
 U64 not_h_file = 0x7F7F7F7F7F7F7F7FULL;
@@ -33,7 +33,7 @@ void init_leapers() {
         knight |= (bitboard << 6) & not_gh_file;
         knight |= (bitboard >> 10) & not_gh_file;
 
-        knight_moves[square] = knight;
+        knight_attacks[square] = knight;
 
         U64 king = 0ULL;
 
@@ -49,7 +49,7 @@ void init_leapers() {
         king |= (bitboard << 7) & not_h_file;
         king |= (bitboard >> 9) & not_h_file;
 
-        king_moves[square] = king;
+        king_attacks[square] = king;
     }
 }
 
