@@ -120,3 +120,42 @@ void print_board(const Position* pos) {
            (pos->castling_rights & BK) ? 'k' : '-', (pos->castling_rights & BQ) ? 'q' : '-');
     printf("  En Passant:    %s\n", (pos->en_passant == -1) ? "none" : "active");
 }
+
+
+int make_move(Position* pos, int move) {
+    Position backup = *pos; // backup in case move is illegal and need to revert
+
+    int from_sq = get_move_from(move);
+    int to_sq = get_move_to(move);
+    int promoted = get_move_promoted(move);
+    int is_ep = get_move_ep(move);
+    int is_double = get_move_double(move);
+    int is_castling = get_move_castle(move);
+
+    // find the moving piece
+    int moving_piece = -1;
+    for (int p_type = P; p_type <= k; p_type++) {
+        if (get_bit(pos->pieces[p_type], from_sq)) {
+            moving_piece = p_type;
+            break;
+        }
+    }
+
+    // If we land on a square, completely clear it from all piece bitboards
+    for (int p_type = P; p_type <= k; p_type++) {
+        pop_bit(pos->pieces[p_type], to_sq);
+    }
+
+    pop_bit(pos->pieces[moving_piece], from_sq);
+    set_bit(pos->pieces[moving_piece], to_sq);
+
+    // handle promotion
+
+    // handle en passant
+
+    // handle double move
+
+    // handle castling
+
+    return 1;
+}

@@ -1,5 +1,6 @@
 #include "../include/movegen.h"
 #include "../include/bitboard.h"
+#include "../include/magic.h"
 #include <stdio.h>
 
 // debugging helper to print encoded moves
@@ -22,6 +23,9 @@ void generate_moves(const Position* pos, MoveList* list) {
     U64 a_file = 0x0101010101010101ULL;
     U64 h_file = 0x8080808080808080ULL;
 
+    U64 friendly_occupancy = (pos->side == WHITE) ? pos->occupancy[WHITE] : pos->occupancy[BLACK];
+
+    // pawns
     if (pos->side == WHITE) {
         // white pawns
         bitboard = pos->pieces[P];
@@ -198,5 +202,85 @@ void generate_moves(const Position* pos, MoveList* list) {
                 addMove(list, encode_move(from_sq, to_sq, 0, 1, 0, 0)); // ep flag set to 1
             }
         }
+    }
+
+    // knights
+
+    U64 knights = (pos->side == WHITE) ? pos->pieces[N] : pos->pieces[n];
+    while(knights) {
+        int from_sq = __builtin_ctzll(knights);
+
+        U64 attacks = knight_moves[from_sq] & ~friendly_occupancy;
+
+        while (attacks) {
+            int to_sq = __builtin_ctzll(attacks);
+            addMove(list, encode_move(from_sq, to_sq, 0, 0, 0, 0));
+            pop_bit(attacks, to_sq);
+        }
+        pop_bit(knights, from_sq);
+    }
+
+    // kings
+
+    U64 kings = (pos->side == WHITE) ? pos->pieces[K] : pos->pieces[k];
+    while(kings) {
+        int from_sq = __builtin_ctzll(kings);
+
+        U64 attacks = king_moves[from_sq] & ~friendly_occupancy;
+
+        while (attacks) {
+            int to_sq = __builtin_ctzll(attacks);
+            addMove(list, encode_move(from_sq, to_sq, 0, 0, 0, 0));
+            pop_bit(attacks, to_sq);
+        }
+        pop_bit(kings, from_sq);
+    }
+
+    // bishops
+
+    U64 bishops = (pos->side == WHITE) ? pos->pieces[B] : pos->pieces[b];
+    while(bishops) {
+        int from_sq = __builtin_ctzll(bishops);
+
+        U64 attacks = get_bishop_attacks(from_sq, pos->occupancy[BOTH]) & ~friendly_occupancy;
+
+        while (attacks) {
+            int to_sq = __builtin_ctzll(attacks);
+            addMove(list, encode_move(from_sq, to_sq, 0, 0, 0, 0));
+            pop_bit(attacks, to_sq);
+        }
+        pop_bit(bishops, from_sq);
+    }
+
+    // rooks
+
+    U64 rooks = (pos->side == WHITE) ? pos->pieces[R] : pos->pieces[r];
+    while(rooks) {
+        int from_sq = __builtin_ctzll(rooks);
+
+        U64 attacks = get_rook_attacks(from_sq, pos->occupancy[BOTH]) & ~friendly_occupancy;
+
+        while (attacks) {
+            int to_sq = __builtin_ctzll(attacks);
+            addMove(list, encode_move(from_sq, to_sq, 0, 0, 0, 0));
+            pop_bit(attacks, to_sq);
+        }
+        pop_bit(rooks, from_sq);
+    }
+
+    // queens
+
+    U64 queens = (pos->side == WHITE) ? pos->pieces[Q] : pos->pieces[q];
+    while(queens) {
+        int from_sq = __builtin_ctzll(queens);
+
+        U64 attacks = get_queen_attacks(from_sq, pos->occupancy[BOTH]) & ~friendly_occupancy;
+
+        while (attacks) {
+            int to_sq = __builtin_ctzll(attacks);
+            addMove(list, encode_move(from_sq, to_sq, 0, 0, 0, 0));
+            pop_bit(attacks, to_sq);
+        }
+        pop_bit(queens, from_sq);
     }
 }

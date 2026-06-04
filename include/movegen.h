@@ -25,8 +25,11 @@ typedef struct {
 #define get_move_promoted(move) (((move) >> 12) & 0xF)
 #define get_move_ep(move) (((move) >> 16) & 1)
 #define get_move_double(move) (((move) >> 17) & 1)
+#define get_move_castle(move) ((move) >> 18 & 1)
 
 
 void generate_moves(const Position* pos, MoveList* list);
+
+void print_move(int move);
 
 #endif

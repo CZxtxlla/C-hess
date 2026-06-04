@@ -29,4 +29,6 @@ typedef struct {
 void parse_fen(Position* pos, const char* fen); // load fen into position struct
 void print_board(const Position* pos); // print fen from position struct
 
+int make_move(Position* pos, int move); // takes move and applies it to the position struct, returns 1 if legal 0 if not
+
 #endif
