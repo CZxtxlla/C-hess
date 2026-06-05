@@ -6,9 +6,19 @@
 
 // debugging helper to print encoded moves
 void print_move(int move) {
-    printf("%c%d%c%d ", 
-           'a' + (get_move_from(move) % 8), (get_move_from(move) / 8) + 1,
-           'a' + (get_move_to(move) % 8), (get_move_to(move) / 8) + 1);
+    int from = get_move_from(move);
+    int to = get_move_to(move);
+    int promoted = get_move_promoted(move);
+
+    printf("%c%d%c%d", 'a' + (from % 8), (from / 8) + 1, 'a' + (to % 8), (to / 8) + 1);
+
+    // If it's a promotion, append the correct letter
+    if (promoted) {
+        if (promoted == Q || promoted == q) printf("q");
+        else if (promoted == R || promoted == r) printf("r");
+        else if (promoted == B || promoted == b) printf("b");
+        else if (promoted == N || promoted == n) printf("n");
+    }
 }
 
 void addMove(MoveList* list, int move) {

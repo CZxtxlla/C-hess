@@ -7,11 +7,56 @@
 int best_move = 0;
 long long nodes_evaluated = 0;
 
+int quiescence(Position* pos, int alpha, int beta) {
+    nodes_evaluated++;
+
+    int current_score = evaluate(pos);
+
+    if (current_score >= beta) {
+        return beta;
+    }
+
+    if (current_score > alpha) {
+        alpha = current_score;
+    }
+
+    MoveList list;
+    generate_moves(pos, &list);
+
+    for (int i = 0; i < list.count; i++) {
+        int move = list.moves[i];
+        int to_sq = get_move_to(move);
+
+        int is_capture = 0;
+        if (pos->occupancy[pos->side ^ 1] & (1 << to_sq)) {
+            is_capture = 1;
+        } else if (get_move_ep(move)) {
+            is_capture = 1;
+        }
+        // only continue search if it is a capture
+        if (is_capture) {
+            Position next_state = *pos;
+
+            if (make_move(&next_state, move)) {
+                int score = -quiescence(&next_state, -beta, -alpha);
+
+                if (score >= beta) {
+                    return beta;
+                }
+                if (score > alpha) {
+                    alpha = score;
+                }
+            }
+        }
+    }
+    return alpha;
+}
+
+
 int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
     // base case
     if (depth == 0) {
-        nodes_evaluated++;
-        return evaluate(pos);
+        return quiescence(pos, alpha, beta);
     }
 
     MoveList list;
