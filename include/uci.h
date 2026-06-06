@@ -3,6 +3,8 @@
 
 #include "position.h"
 
+extern char current_game_history[2048];
+
 int parse_move(char* move_string, Position* pos); // Helper function to turn a string like "e2e4" or "e7e8q" into an integer move
 
 void parse_position(char* command, Position* pos); // perform all the moves that have happened

@@ -21,7 +21,6 @@ long long get_time_ms() {
     return (tv.tv_sec * 1000LL) + (tv.tv_usec / 1000LL);
 }
 
-
 // helper to get piecetype at a position
 int get_piece_at(Position* pos, int square) {
     for (int piece_type = P; piece_type <= k; piece_type++) {
@@ -31,7 +30,6 @@ int get_piece_at(Position* pos, int square) {
     }
     return -1; // empty square
 }
-
 
 int score_move(Position* pos, int move) {
     if (get_move_promoted(move)) {
@@ -144,7 +142,6 @@ int quiescence(Position* pos, int alpha, int beta) {
     return alpha;
 }
 
-
 int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
     // Every 2048 nodes, check if we are out of time
     if ((nodes_evaluated % 2048) == 0) {
@@ -210,10 +207,6 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
 
     return alpha;
 }
-
-
-
-
 
 void search_position(Position* pos, int depth) {
     search_start_time = get_time_ms();

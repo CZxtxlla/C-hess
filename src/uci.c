@@ -4,6 +4,53 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+
+char current_game_history[2048] = "";
+
+// helper to get book move if the history is recognized
+int get_book_move(char* history, Position* pos) {
+    FILE* file = fopen("book.txt", "r");
+    if (!file) return 0;
+
+    int possible_moves[256];
+    int count = 0;
+    char line[2048];
+    
+    int history_len = strlen(history);
+
+    while (fgets(line, sizeof(line), file)) {
+        if (strncmp(line, history, history_len) == 0) {
+            
+            char* next_move_str = line + history_len;
+            while (*next_move_str == ' ') next_move_str++;
+            
+            if (*next_move_str != '\n' && *next_move_str != '\0' && *next_move_str != '\r') {
+                
+                char single_move[6] = {0};
+                sscanf(next_move_str, "%5s", single_move);
+                
+                int move = parse_move(single_move, pos); 
+                if (move != 0) {
+                    // Prevent Buffer Overflow!
+                    if (count < 256) {
+                        possible_moves[count++] = move;
+                    } else {
+                        // We have 256 options, that's plenty.
+                        break; 
+                    }
+                }
+            }
+        }
+    }
+    fclose(file);
+
+    if (count == 0) return 0; 
+
+    // Return a random move
+    return possible_moves[rand() % count];
+}
+
 
 void parse_go(char* command, Position* pos) {
     int depth = 64; // massive depth so the clock breaks
@@ -40,6 +87,16 @@ void parse_go(char* command, Position* pos) {
         // If no time was sent, just think for 2 seconds
         search_time_limit = 2000; 
     }
+
+    int book_move = get_book_move(current_game_history, pos);
+    if (book_move != 0) {
+        // found book move, print it and skip search
+        printf("bestmove ");
+        print_move(book_move);
+        printf("\n");
+        return; 
+    }
+
 
     // iterative deepening
     search_position(pos, depth);
@@ -95,6 +152,8 @@ void parse_position(char* command, Position* pos) {
     command += 9; // Skip the word "position "
     char* current_char = command;
 
+    current_game_history[0] = '\0';
+
     // 1. Set the initial board state (Either startpos or a custom FEN)
     if (strncmp(command, "startpos", 8) == 0) {
         parse_fen(pos, START_POSITION);
@@ -109,6 +168,8 @@ void parse_position(char* command, Position* pos) {
 
     if (current_char != NULL) {
         current_char += 6; // Skip the word "moves "
+
+        strcpy(current_game_history, current_char);
         
         // 3. Loop through all the moves and physically apply them to the board
         while (*current_char) {
@@ -124,11 +185,69 @@ void parse_position(char* command, Position* pos) {
     }
 }
 
+void run_benchmark(char* command, Position* pos) {
+    // Expected command format: bench [depth] [FEN]
+
+    char* ptr = command + 5; // skip word bench
+
+    while (*ptr == ' ') ptr++; // skip spaces
+
+    int target_depth = 5; // Default depth if none is provided
+
+    // extract the given depth
+    if (*ptr >= '0' && *ptr <= '9') {
+        target_depth = atoi(ptr);
+        while (*ptr != ' ' && *ptr != '\0') ptr++;
+        while (*ptr == ' ') ptr++;
+    }
+
+    char* fen = START_POSITION; // default fen if none is provided
+
+    // extract the fen
+    if (*ptr != '\0') {
+        fen = ptr;
+    }
+
+    parse_fen(pos, fen); // set the board
+
+    printf("\n=== BENCHMARK STARTED: DEPTH %d ===\n", target_depth);
+
+    // disable the clock
+    search_time_limit = 99999999; 
+    time_over = 0;
+    nodes_evaluated = 0;
+    search_start_time = get_time_ms();
+
+    int best_move_so_far = 0;
+    long long total_nodes = 0;
+
+    // run iterative deepening loop
+    for (int current_depth = 1; current_depth <= target_depth; current_depth++) {
+        long long nodes_before = nodes_evaluated;
+        int final_score = negamax(pos, current_depth, 0, -50000, 50000);
+        best_move_so_far = best_move;
+        
+        long long duration = get_time_ms() - search_start_time;
+        long long depth_nodes = nodes_evaluated - nodes_before;
+        total_nodes += depth_nodes;
+        
+        // print table row for each depth
+        printf("Depth %2d | Score: %5d | Nodes: %10lld | Time: %5lld ms\n", current_depth, final_score, depth_nodes, duration);
+    }
+
+    printf("===================================\n");
+    printf("Best Move: ");
+    print_move(best_move_so_far);
+    printf("\nTotal Nodes: %lld\n\n", total_nodes);
+}
+
 
 void uci_loop(Position* pos) {
     // unbuffer the output so GUI gets text instantly
     setbuf(stdin, NULL);
     setbuf(stdout, NULL);
+
+    srand(time(NULL));
 
     char line[2048];
 
@@ -157,8 +276,9 @@ void uci_loop(Position* pos) {
         } 
         else if (strncmp(line, "go", 2) == 0) {
             parse_go(line, pos);
-        } 
-        else if (strcmp(line, "quit") == 0) {
+        } else if (strncmp(line, "bench", 5) == 0) {
+            run_benchmark(line, pos);
+        } else if (strcmp(line, "quit") == 0) {
             break;
         }
     }

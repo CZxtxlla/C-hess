@@ -5,6 +5,12 @@
 #include "movegen.h"
 
 extern int search_time_limit;
+extern int time_over;
+extern long long nodes_evaluated;
+extern long long search_start_time;
+extern int best_move;
+
+long long get_time_ms();
 
 // helper to give a move a very quick preliminary score value
 int score_move(Position* pos, int move);
