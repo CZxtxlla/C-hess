@@ -87,7 +87,7 @@ def extract_indices(board):
 # 3. Load Model
 device = torch.device("cpu") # CPU is fine for single inferences
 model = HalfKPNNUE().to(device)
-model.load_state_dict(torch.load("nnue_checkpoint.pth", map_location=device, weights_only=True))
+model.load_state_dict(torch.load("../nnue_checkpoint.pth", map_location=device, weights_only=True))
 model.eval() # Set to evaluation mode
 
 def evaluate_fen(fen):

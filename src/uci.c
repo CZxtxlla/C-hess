@@ -2,6 +2,7 @@
 #include "../include/search.h"
 #include "../include/movegen.h"
 #include "../include/zobrist.h"
+#include "../nnue/nnue.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -228,6 +229,23 @@ void run_benchmark(char* command, Position* pos) {
     }
 
     parse_fen(pos, fen); // set the board
+
+    // --- DIAGNOSTIC SANITY CHECK ---
+    printf("\n--- NNUE STATIC EVALUATION TEST ---\n");
+    
+    // 1. Evaluate the benchmark FEN
+    printf("Current FEN Eval: %d centipawns\n", evaluate_nnue(&pos->w_acc, &pos->b_acc));
+    
+    // 2. Temporarily load the "White Up a Queen" FEN
+    Position test_pos;
+    parse_fen(&test_pos, "8/8/8/8/8/8/4Q3/4K2k w - - 0 1");
+    printf("White up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos.w_acc, &test_pos.b_acc));
+    
+    // 3. Temporarily load the "Black Up a Queen" FEN
+    parse_fen(&test_pos, "4k3/4q3/8/8/8/8/8/4K3 w - - 0 1");
+    printf("Black up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos.w_acc, &test_pos.b_acc));
+    
+    printf("-----------------------------------\n\n");
 
     printf("\n=== BENCHMARK STARTED: DEPTH %d ===\n", target_depth);
 

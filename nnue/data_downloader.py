@@ -4,7 +4,7 @@ import math
 from datasets import load_dataset
 
 OUTPUT_FILE = "data.bin"
-POSITIONS_TO_DOWNLOAD = 15_000_000 # Stop after 2 million positions
+POSITIONS_TO_DOWNLOAD = 100_000_000 # Stop after 100 million positions
 
 def piece_to_int(piece):
     if piece is None: return 0

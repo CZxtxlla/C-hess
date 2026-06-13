@@ -3,6 +3,7 @@
 #include "../include/position.h"
 #include "../include/uci.h"
 #include "../include/zobrist.h"
+#include "nnue/nnue.h"
 
 int main() {
     init_leapers();
@@ -11,6 +12,7 @@ int main() {
     init_zobrist();
     init_tt(64); // 64 megabytes
 
+    init_nnue("nnue/nnue_network.bin");
     Position board;
     
     // Hand control over to the UCI listener

@@ -70,7 +70,7 @@ model = HalfKPNNUE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 criterion = nn.MSELoss()
 
-BATCH_SIZE = 8192 # You can easily do 8k-32k batches now because of your C loader!
+BATCH_SIZE = 32768 # You can easily do 8k-32k batches now because of your C loader!
 EPOCHS = 10
 
 # 3. Training Loop

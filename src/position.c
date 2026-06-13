@@ -4,6 +4,7 @@
 #include "../include/magic.h"
 #include "../include/movegen.h"
 #include "../include/zobrist.h"
+#include "nnue/nnue.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -111,6 +112,7 @@ void parse_fen(Position* pos, const char* fen) {
     pos->occupancy[BOTH] = pos->occupancy[BLACK] | pos->occupancy[WHITE];
 
     pos->hash_key = generate_hash(pos);
+    refresh_accumulator(pos, &pos->w_acc, &pos->b_acc);
 }
 
 void print_board(const Position* pos) {
@@ -184,6 +186,31 @@ int is_square_attacked(int square, int attacker_side, const Position* pos) {
     return 0; // not attacked
 }
 
+// helper for accumulators
+static inline void update_nnue(Position* pos, int pt, int sq, int is_add) {
+    // Get the mapped piece types (0-9)
+    int w_pt = get_halfkp_piece(pt, 1);
+    int b_pt = get_halfkp_piece(pt, 0);
+    if (w_pt == -1 || b_pt == -1) return; // Skip kings and invalid pieces
+
+    // Find the King squares
+    int w_king_sq = __builtin_ctzll(pos->pieces[K]);
+    int b_king_sq = __builtin_ctzll(pos->pieces[k]);
+
+    // Get the feature indices
+    int w_idx = get_feature_index(1, w_king_sq, w_pt, sq);
+    int b_idx = get_feature_index(0, b_king_sq, b_pt, sq);
+
+    // Update the accumulators
+    if (is_add) {
+        add_feature(&pos->w_acc, w_idx);
+        add_feature(&pos->b_acc, b_idx);
+    } else {
+        remove_feature(&pos->w_acc, w_idx);
+        remove_feature(&pos->b_acc, b_idx);
+    }
+}
+
 
 int make_move(Position* pos, int move) {
     Position backup = *pos; // backup in case move is illegal and need to revert
@@ -210,12 +237,15 @@ int make_move(Position* pos, int move) {
         }
     }
 
+    int is_king_move = (moving_piece == K || moving_piece == k); // for NNUE
+
     // find the captured piece and remove it from the bitboard
     int captured_piece = -1;
     for (int p_type = P; p_type <= k; p_type++) {
         if (get_bit(pos->pieces[p_type], to_sq)) {
             captured_piece = p_type;
             pop_bit(pos->pieces[captured_piece], to_sq);
+            if (!is_king_move) update_nnue(pos, captured_piece, to_sq, 0); // remove captured piece
             break; // Found the victim, break out
         }
     }
@@ -227,7 +257,9 @@ int make_move(Position* pos, int move) {
 
     // move the piece
     pop_bit(pos->pieces[moving_piece], from_sq);
+    if (!is_king_move) update_nnue(pos, moving_piece, from_sq, 0);
     set_bit(pos->pieces[moving_piece], to_sq);
+    if (!is_king_move) update_nnue(pos, moving_piece, to_sq, 1);
 
     // move the hash piece
     pos->hash_key ^= piece_keys[moving_piece][from_sq];
@@ -239,6 +271,7 @@ int make_move(Position* pos, int move) {
         int captured_pawn_sq = (pos->side == WHITE) ? (to_sq - 8) : (to_sq + 8);
         int captured_pawn = (pos->side == WHITE) ? p : P;
         pop_bit(pos->pieces[captured_pawn], captured_pawn_sq); 
+        if (!is_king_move) update_nnue(pos, captured_pawn, captured_pawn_sq, 0);
 
         // hash out the en passant capture
         pos->hash_key ^= piece_keys[captured_pawn][captured_pawn_sq];
@@ -247,10 +280,13 @@ int make_move(Position* pos, int move) {
         // handle promotion: remove pawn of moving side, add promoted piece
         if (pos->side == WHITE) {
             pop_bit(pos->pieces[P], to_sq);
+            if (!is_king_move) update_nnue(pos, P, to_sq, 0);
         } else {
             pop_bit(pos->pieces[p], to_sq);
+            if (!is_king_move) update_nnue(pos, p, to_sq, 0);
         }
         set_bit(pos->pieces[promoted], to_sq);
+        if (!is_king_move) update_nnue(pos, promoted, to_sq, 1);
 
         int pawn_type = (pos->side == WHITE) ? P : p;
         pos->hash_key ^= piece_keys[pawn_type][to_sq]; // hash out the moved pawn
@@ -258,6 +294,7 @@ int make_move(Position* pos, int move) {
 
     } else if (is_castling) {
         // handle castle
+        // note we don't incrementally update nnue here because king is moving, will handle at the end
         if (to_sq == G1) {
             // white kingside
             pop_bit(pos->pieces[R], H1);
@@ -324,6 +361,11 @@ int make_move(Position* pos, int move) {
         // illegal move
         *pos = backup;
         return 0;
+    }
+
+    // if it was a king move, fully reset accumulator
+    if (is_king_move) {
+        refresh_accumulator(pos, &pos->w_acc, &pos->b_acc);
     }
 
     // legal move

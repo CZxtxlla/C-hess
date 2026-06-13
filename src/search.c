@@ -143,7 +143,7 @@ void order_moves(Position* pos, MoveList* list, int distance, int hash_move) {
     }
 }
 
-int quiescence(Position* pos, int alpha, int beta) {
+int quiescence(Position* pos, int alpha, int beta, int distance) {
     nodes_evaluated++;
 
     // Every 2048 nodes, check if we are out of time
@@ -156,20 +156,24 @@ int quiescence(Position* pos, int alpha, int beta) {
     // If time is up, return immediately
     if (time_over) return 0;
 
-    int current_score = evaluate(pos);
+    // --- NEW: Detect checks inside QS ---
+    int king_type = (pos->side == WHITE) ? K : k;
+    int king_sq = __builtin_ctzll(pos->pieces[king_type]);
+    int in_check = is_square_attacked(king_sq, pos->side^1, pos);
 
-    if (current_score >= beta) {
-        return beta;
-    }
-
-    if (current_score > alpha) {
-        alpha = current_score;
+    // 1. Stand Pat: We ONLY evaluate the static board if we are safe
+    if (!in_check) {
+        int current_score = evaluate(pos);
+        if (current_score >= beta) return beta;
+        if (current_score > alpha) alpha = current_score;
     }
 
     MoveList list;
     generate_moves(pos, &list);
 
     order_moves(pos, &list, 0, 0); // 0 for the distance as a dummy since the score will be overidden by the fact it's a capture
+
+    int legal_moves = 0;
 
     for (int i = 0; i < list.count; i++) {
         int move = list.moves[i];
@@ -182,11 +186,12 @@ int quiescence(Position* pos, int alpha, int beta) {
             is_capture = 1;
         }
         // only continue search if it is a capture
-        if (is_capture) {
+        if (is_capture || in_check) {
             Position next_state = *pos;
 
             if (make_move(&next_state, move)) {
-                int score = -quiescence(&next_state, -beta, -alpha);
+                legal_moves++;
+                int score = -quiescence(&next_state, -beta, -alpha, distance + 1);
 
                 if (time_over) return 0;
 
@@ -198,6 +203,9 @@ int quiescence(Position* pos, int alpha, int beta) {
                 }
             }
         }
+    }
+    if (in_check && legal_moves == 0) {
+        return -49000 + distance;
     }
     return alpha;
 }
@@ -217,7 +225,7 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
 
     // base case
     if (depth == 0) {
-        return quiescence(pos, alpha, beta);
+        return quiescence(pos, alpha, beta, distance);
     }
 
     if (distance > 0 && is_repetition(pos)) {
@@ -241,6 +249,8 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
             if (distance == 0 && hash_move != 0) {
                 best_move = hash_move;
             }
+            if (tt_score > 48000) tt_score -= distance;
+            if (tt_score < -48000) tt_score += distance;
             return tt_score;  // perfect, cut the search
         }
     }

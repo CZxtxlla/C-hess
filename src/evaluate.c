@@ -1,6 +1,7 @@
 #include "../include/evaluate.h"
 #include "../include/position.h"
 #include "../include/bitboard.h"
+#include "nnue/nnue.h"
 
 // ------ Piece Square Tables ------
 // (I copied these from my previous chess bot program, also can be found here: 
@@ -125,7 +126,7 @@ const int piece_values[12] = {
 
 int evaluate(Position* pos) {
     // get score value for a given position
-
+    
     int phase = get_game_phase(pos);
 
     int score = 0;
@@ -156,6 +157,11 @@ int evaluate(Position* pos) {
             }
         } 
     }
+    int nnue_score = evaluate_nnue(&pos->w_acc, &pos->b_acc);
+    score = (score + nnue_score) / 2;
 
     return (pos->side == WHITE) ? score : -score; // flip the score if from the perspective of black
+    
+    //int score = evaluate_nnue(&pos->w_acc, &pos->b_acc);
+    //return (pos->side == WHITE) ? score: -score;
 }

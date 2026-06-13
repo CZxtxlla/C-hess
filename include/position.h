@@ -2,6 +2,7 @@
 #define POSITION_H
 
 #include "types.h"
+#include "../nnue/nnue.h"
 
 // castling rights (0001 for white kingside, 0010 for white queenside, ...)
 enum {
@@ -11,7 +12,7 @@ enum {
     BQ = 8
 };
 
-typedef struct {
+typedef struct Position {
 
     U64 pieces[12]; // one bitboard for each piece type
 
@@ -22,7 +23,11 @@ typedef struct {
     int castling_rights; // 4 bit mask (WK | WQ | BK | BQ)
 
     U64 hash_key; // used for zobrist hash of the position for transposition tables
-    
+
+    // accumulators for nnue
+    Accumulator w_acc;
+    Accumulator b_acc;
+
 } Position;
 
 #define START_POSITION "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

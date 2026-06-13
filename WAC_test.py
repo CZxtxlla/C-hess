@@ -3,7 +3,7 @@ import chess.engine
 
 print("Booting up the Test...")
 
-engine = chess.engine.SimpleEngine.popen_uci("./Mark_9")
+engine = chess.engine.SimpleEngine.popen_uci("./Mark_9.1")
 
 correct = 0
 total = 0
