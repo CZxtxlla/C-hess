@@ -679,3 +679,34 @@ Player: Mark8
    "Win: Black mates": 205
    "Win: White mates": 325
 Finished match
+
+
+Mark_10 (Mark_9 but with blended 50 % NNUE evaluation, 50% standard evaluation)
+
+The following is the result from SPRT with stockfish level 4
+
+Player: Mark11
+   "Draw by 3-fold repetition": 26
+   "Draw by fifty moves rule": 14
+   "Draw by insufficient mating material": 11
+   "Draw by stalemate": 2
+   "Loss: Black mates": 100
+   "Loss: White makes an illegal move: h1g3": 1
+   "Loss: White mates": 144
+   "No result": 3
+   "Win: Black mates": 157
+   "Win: White loses on time": 1
+   "Win: White mates": 190
+Player: Stockfish_Level_4
+   "Draw by 3-fold repetition": 26
+   "Draw by fifty moves rule": 14
+   "Draw by insufficient mating material": 11
+   "Draw by stalemate": 2
+   "Loss: Black mates": 157
+   "Loss: White loses on time": 1
+   "Loss: White mates": 190
+   "No result": 3
+   "Win: Black mates": 100
+   "Win: White makes an illegal move: h1g3": 1
+   "Win: White mates": 144
+Finished match
