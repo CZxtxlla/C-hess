@@ -302,6 +302,9 @@ void uci_loop(Position* pos) {
         if (strcmp(line, "uci") == 0) {
             printf("id name CharlesEngine\n");
             printf("id author Charles\n");
+            printf("option name Move Overhead type spin default 500 min 0 max 5000\n");
+            printf("option name Threads type spin default 1 min 1 max 128\n");
+            printf("option name Hash type spin default 16 min 1 max 32768\n");
             printf("uciok\n");
         } 
         else if (strcmp(line, "isready") == 0) {
