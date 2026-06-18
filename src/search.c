@@ -14,6 +14,9 @@ int game_ply = 0;       // How many moves deep into the game we are
 int killer_moves[2][64]; // stores 2 killer moves for up to 64 depth plys
 int history_moves[2][64][64]; // [color][from_sq][to_sq]
 
+int pv_length[64]; // Stores the length of the PV for each ply
+int pv_table[64][64]; // stores the actual PV moves: [ply][move index]
+
 // used for iterative deepening
 int search_time_limit = 2000; // Stop searching after 2000ms (2 seconds)
 long long search_start_time = 0;
@@ -210,6 +213,11 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
         }
     }
 
+    // initialize pv length table
+    if (distance < 64) {
+        pv_length[distance] = distance;
+    }
+
     // If time is up, return immediately
     if (time_over) {
         return 0;
@@ -311,11 +319,39 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
 
             int score;
 
-            // principle variation search
+            int move = list.moves[i];
+            int to_sq = get_move_to(move);
+            int is_capture = pos->occupancy[pos->side ^ 1] & (1ULL << to_sq) || get_move_ep(move);
+            int is_promotion = get_move_promoted(move);
+
+            // principle variation search and LMR
             if (moves_searched == 0) {
-                score = -negamax(&next_state, depth - 1, distance + 1, -beta, -alpha);
+                score = -negamax(&next_state, depth - 1, distance + 1, -beta, -alpha); // full window
             } else {
-                score = -negamax(&next_state, depth - 1, distance + 1, -alpha - 1, -alpha);
+                int pvs = 1;
+
+                // only reduce quiet moves at greater than 3 depth late in the list
+                if (depth >= 3 && moves_searched >= 3 && !is_capture && !is_promotion && !in_check) {
+                    int reduction = 1; // reduction amount
+                    
+                    // If it's really deep and really late, reduce by 2
+                    if (depth >= 4 && moves_searched >= 6) {
+                        reduction = 2; 
+                    }
+
+                    score = -negamax(&next_state, depth - 1 - reduction, distance + 1, -alpha - 1, -alpha);
+
+                    // reduction worked
+                    if (score <= alpha) {
+                        pvs = 0; // Skip the normal search
+                    }
+                }
+
+
+                // run if didn't reduce or reduction search failed high (move might be good)
+                if (pvs) {
+                    score = -negamax(&next_state, depth - 1, distance + 1, -alpha - 1, -alpha);
+                }
 
                 // failsafe if move was actually better
                 if (score > alpha && score < beta) {
@@ -336,6 +372,18 @@ int negamax(Position* pos, int depth, int distance, int alpha, int beta) {
 
                 if (distance == 0) {
                     best_move = list.moves[i];
+                }
+
+                if (distance < 64) {
+                    pv_table[distance][distance] = list.moves[i];
+                    
+                    // Copy the PV from the deeper ply to the current ply
+                    for (int next_ply = distance + 1; next_ply < pv_length[distance + 1]; next_ply++) {
+                        pv_table[distance][next_ply] = pv_table[distance + 1][next_ply];
+                    }
+                    
+                    // Update the length of the PV line
+                    pv_length[distance] = pv_length[distance + 1];
                 }
             }
 
@@ -401,6 +449,8 @@ void search_position(Position* pos, int depth) {
 
     memset(killer_moves, 0, sizeof(killer_moves));
     memset(history_moves, 0, sizeof(history_moves));
+    memset(pv_table, 0, sizeof(pv_table));
+    memset(pv_length, 0, sizeof(pv_length));
 
     // iterative deepening
     for (int current_depth = 1; current_depth <= depth; current_depth++) {
@@ -414,7 +464,12 @@ void search_position(Position* pos, int depth) {
 
         long long duration = get_time_ms() - search_start_time;
 
-        printf("info depth %d score cp %d nodes %lld\n", current_depth, final_score, nodes_evaluated);
+        printf("info depth %d score cp %d time %lld nodes %lld pv ", current_depth, final_score, duration, nodes_evaluated);
+        for (int count = 0; count < pv_length[0]; count++) {
+            print_move(pv_table[0][count]);
+            printf(" ");
+        }
+        printf("\n");
     }
 
     // Output the results in the official UCI format

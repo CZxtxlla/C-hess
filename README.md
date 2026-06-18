@@ -427,6 +427,9 @@ hash ^= zobrist_pieces[WHITE_PAWN][e4]; // place piece on destination
 
 [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning).
 
+### Principle Variation Search
+
+### Late Move Reduction
 
 ## 5. Results
 
@@ -680,8 +683,40 @@ Player: Mark8
    "Win: White mates": 325
 Finished match
 
+Mark_10 (Mark_9 but with late move reductions)
 
-Mark_10 (Mark_9 but with blended 50 % NNUE evaluation, 50% standard evaluation)
+The following is the result from SPRT with mark 9
+
+...      Mark10 playing White: 146 - 70 - 63  [0.636] 279
+...      Mark10 playing Black: 103 - 95 - 80  [0.514] 278
+...      White vs Black: 241 - 173 - 143  [0.561] 557
+Elo difference: 52.8 +/- 25.1, LOS: 100.0 %, DrawRatio: 25.7 %
+SPRT: llr 2.97 (100.8%), lbound -2.94, ubound 2.94 - H1 was accepted
+
+Player: Mark10
+   "Draw by 3-fold repetition": 112
+   "Draw by fifty moves rule": 6
+   "Draw by insufficient mating material": 24
+   "Draw by stalemate": 1
+   "Loss: Black mates": 70
+   "Loss: White mates": 95
+   "No result": 3
+   "Win: Black mates": 103
+   "Win: White mates": 146
+Player: Mark9
+   "Draw by 3-fold repetition": 112
+   "Draw by fifty moves rule": 6
+   "Draw by insufficient mating material": 24
+   "Draw by stalemate": 1
+   "Loss: Black mates": 103
+   "Loss: White mates": 146
+   "No result": 3
+   "Win: Black mates": 70
+   "Win: White mates": 95
+Finished match
+
+
+Mark_9NNUE (Mark_9 but with blended 50 % NNUE evaluation, 50% standard evaluation)
 
 The following is the result from SPRT with stockfish level 4
 
