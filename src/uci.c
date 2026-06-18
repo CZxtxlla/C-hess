@@ -234,16 +234,16 @@ void run_benchmark(char* command, Position* pos) {
     printf("\n--- NNUE STATIC EVALUATION TEST ---\n");
     
     // 1. Evaluate the benchmark FEN
-    printf("Current FEN Eval: %d centipawns\n", evaluate_nnue(&pos->w_acc, &pos->b_acc));
+    printf("Current FEN Eval: %d centipawns\n", evaluate_nnue(pos));
     
     // 2. Temporarily load the "White Up a Queen" FEN
     Position test_pos;
     parse_fen(&test_pos, "8/8/8/8/8/8/4Q3/4K2k w - - 0 1");
-    printf("White up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos.w_acc, &test_pos.b_acc));
+    printf("White up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos));
     
     // 3. Temporarily load the "Black Up a Queen" FEN
     parse_fen(&test_pos, "4k3/4q3/8/8/8/8/8/4K3 w - - 0 1");
-    printf("Black up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos.w_acc, &test_pos.b_acc));
+    printf("Black up a Queen Eval: %d centipawns\n", evaluate_nnue(&test_pos));
     
     printf("-----------------------------------\n\n");
 

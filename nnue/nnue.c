@@ -106,13 +106,13 @@ void refresh_accumulator(Position* pos, Accumulator* w_acc, Accumulator* b_acc) 
 
 
 // Returns the evaluation in Centipawns relative to White
-int evaluate_nnue(Accumulator* w_acc, Accumulator* b_acc) {
+int evaluate_nnue(Position* pos) {
     int32_t l1_input[512]; 
     
-    // 1. Concatenate accumulators and apply Clipped ReLU
+    // Concatenate accumulators and apply Clipped ReLU
     for(int i = 0; i < L1_SIZE; i++) {
-        l1_input[i] = (w_acc->values[i] < 0) ? 0 : ((w_acc->values[i] > 255) ? 255 : w_acc->values[i]);
-        l1_input[i + L1_SIZE] = (b_acc->values[i] < 0) ? 0 : ((b_acc->values[i] > 255) ? 255 : b_acc->values[i]);
+        l1_input[i] = (pos->w_acc.values[i] < 0) ? 0 : ((pos->w_acc.values[i] > 255) ? 255 : pos->w_acc.values[i]);
+        l1_input[i + L1_SIZE] = (pos->b_acc.values[i] < 0) ? 0 : ((pos->b_acc.values[i] > 255) ? 255 : pos->b_acc.values[i]);
     }
 
     // 2. Layer 1 (512 -> 32)
@@ -158,6 +158,10 @@ int evaluate_nnue(Accumulator* w_acc, Accumulator* b_acc) {
         output += l2_out[j] * global_nnue.output_weight[j][0];
     }
 
-    // 5. Convert to Centipawns
-    return (int)(((long long) output * 400) /65025); 
+     // Convert to Centipawns
+    int score = (int)(((long long) output * 400) /65025);
+    return score;
+
+    // flip score for black
+    //return (pos->side == WHITE) ? score : -score;
 }

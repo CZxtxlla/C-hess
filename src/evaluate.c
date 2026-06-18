@@ -157,7 +157,7 @@ int evaluate(Position* pos) {
             }
         } 
     }
-    int nnue_score = evaluate_nnue(&pos->w_acc, &pos->b_acc);
+    int nnue_score = evaluate_nnue(pos);
     score = (score + nnue_score) / 2;
 
     return (pos->side == WHITE) ? score : -score; // flip the score if from the perspective of black

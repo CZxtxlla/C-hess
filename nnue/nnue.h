@@ -49,7 +49,7 @@ typedef struct Position Position; // forward declaration
 void  refresh_accumulator(Position* pos, Accumulator* w_acc, Accumulator* b_acc);
 
 // Returns the evaluation in Centipawns relative to White
-int evaluate_nnue(Accumulator* w_acc, Accumulator* b_acc);
+int evaluate_nnue(Position* pos);
 
 int get_halfkp_piece(int pt, int is_white_perspective);
 
