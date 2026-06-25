@@ -3,7 +3,7 @@
 #include "../include/position.h"
 #include "../include/uci.h"
 #include "../include/zobrist.h"
-#include "../include/tbprobe.h"
+#include "../syzygy/tbprobe.h"
 
 int main() {
     init_leapers();

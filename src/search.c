@@ -3,7 +3,7 @@
 #include "../include/movegen.h"
 #include "../include/position.h"
 #include "../include/zobrist.h"
-#include "../include/tbprobe.h"
+#include "../syzygy/tbprobe.h"
 #include <stdio.h>
 #include <sys/time.h>
 #include <string.h>
