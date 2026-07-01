@@ -117,24 +117,21 @@ static inline int32_t clipped_leaky_relu(int32_t x) {
 }
 
 
-// Returns the evaluation in Centipawns relative to White
+// Returns the evaluation in Centipawns relative to the SIDE TO MOVE
 int evaluate_nnue(Position* pos) {
     int32_t l1_input[512]; 
     
-<<<<<<< HEAD
-    // Concatenate accumulators and apply Clipped ReLU
+    // 1. Determine Active and Inactive accumulators based on whose turn it is
+    Accumulator* active_acc = (pos->side == WHITE) ? &pos->w_acc : &pos->b_acc;
+    Accumulator* inactive_acc = (pos->side == WHITE) ? &pos->b_acc : &pos->w_acc;
+
+    // 2. Concatenate accumulators (Active first) and apply Clipped Leaky ReLU
     for(int i = 0; i < L1_SIZE; i++) {
-        l1_input[i] = (pos->w_acc.values[i] < 0) ? 0 : ((pos->w_acc.values[i] > 255) ? 255 : pos->w_acc.values[i]);
-        l1_input[i + L1_SIZE] = (pos->b_acc.values[i] < 0) ? 0 : ((pos->b_acc.values[i] > 255) ? 255 : pos->b_acc.values[i]);
-=======
-    // 1. Concatenate accumulators and apply Clipped leaky ReLU
-    for(int i = 0; i < L1_SIZE; i++) {
-        l1_input[i] = clipped_leaky_relu(w_acc->values[i]);
-        l1_input[i + L1_SIZE] = clipped_leaky_relu(b_acc->values[i]);
->>>>>>> ff2098d (fix for quanitized nnue)
+        l1_input[i] = clipped_leaky_relu(active_acc->values[i]);
+        l1_input[i + L1_SIZE] = clipped_leaky_relu(inactive_acc->values[i]);
     }
 
-    // 2. Layer 1 (512 -> 32)
+    // 3. Layer 1 (512 -> 32)
     int32_t l1_out[32];
     for(int i = 0; i < 32; i++) l1_out[i] = global_nnue.l1_bias[i] * 255; // Base bias
     
@@ -154,7 +151,7 @@ int evaluate_nnue(Position* pos) {
         l1_out[i] = clipped_leaky_relu(l1_out[i]);
     }
 
-    // 3. Layer 2 (32 -> 32)
+    // 4. Layer 2 (32 -> 32)
     int32_t l2_out[32];
     for(int i = 0; i < 32; i++) l2_out[i] = global_nnue.l2_bias[i] * 255;
     
@@ -170,17 +167,16 @@ int evaluate_nnue(Position* pos) {
         l2_out[i] = clipped_leaky_relu(l2_out[i]);
     }
 
-    // 4. Output Layer (32 -> 1)
+    // 5. Output Layer (32 -> 1)
     int32_t output = global_nnue.output_bias[0] * 255;
     for(int j = 0; j < 32; j++) {
         if (l2_out[j] == 0) continue;
         output += l2_out[j] * global_nnue.output_weight[j][0];
     }
 
-     // Convert to Centipawns
-    int score = (int)(((long long) output * 400) /65025);
+    // 6. Convert to Centipawns
+    // Because the Active accumulator is always first, positive score = Side to move is winning.
+    // The manual side-flip logic at the bottom has been safely removed.
+    int score = (int)(((long long) output * 400) / 65025);
     return score;
-
-    // flip score for black
-    //return (pos->side == WHITE) ? score : -score;
 }
