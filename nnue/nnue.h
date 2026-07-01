@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define FEATURE_SIZE 40960
+#define FEATURE_SIZE 41024
 #define L1_SIZE 256
 
 

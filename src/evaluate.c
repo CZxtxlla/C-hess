@@ -1,7 +1,7 @@
 #include "../include/evaluate.h"
 #include "../include/position.h"
 #include "../include/bitboard.h"
-#include "nnue/nnue.h"
+#include "../nnue/nnue.h"
 
 // ------ Piece Square Tables ------
 // (I copied these from my previous chess bot program, also can be found here: 

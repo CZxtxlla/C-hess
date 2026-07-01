@@ -28,7 +28,7 @@ int get_feature_index(int is_white, int king_sq, int piece_type, int piece_sq) {
         piece_sq ^= 56;
     }
 
-    return king_sq * 640 + piece_type * 64 + piece_sq;
+    return king_sq * 641 + piece_type * 64 + piece_sq;
 }
 
 // update accumulator when piece placed on board
@@ -104,15 +104,34 @@ void refresh_accumulator(Position* pos, Accumulator* w_acc, Accumulator* b_acc) 
     }
 }
 
+static inline int32_t clipped_leaky_relu(int32_t x) {
+    if (x < 0) {
+        // Fast approximation of x * 0.01
+        // (x * 41) >> 12 handles the negative leak instantly
+        return (x * 41) >> 12; 
+    }
+    if (x > 255) {
+        return 255;
+    }
+    return x;
+}
+
 
 // Returns the evaluation in Centipawns relative to White
 int evaluate_nnue(Position* pos) {
     int32_t l1_input[512]; 
     
+<<<<<<< HEAD
     // Concatenate accumulators and apply Clipped ReLU
     for(int i = 0; i < L1_SIZE; i++) {
         l1_input[i] = (pos->w_acc.values[i] < 0) ? 0 : ((pos->w_acc.values[i] > 255) ? 255 : pos->w_acc.values[i]);
         l1_input[i + L1_SIZE] = (pos->b_acc.values[i] < 0) ? 0 : ((pos->b_acc.values[i] > 255) ? 255 : pos->b_acc.values[i]);
+=======
+    // 1. Concatenate accumulators and apply Clipped leaky ReLU
+    for(int i = 0; i < L1_SIZE; i++) {
+        l1_input[i] = clipped_leaky_relu(w_acc->values[i]);
+        l1_input[i + L1_SIZE] = clipped_leaky_relu(b_acc->values[i]);
+>>>>>>> ff2098d (fix for quanitized nnue)
     }
 
     // 2. Layer 1 (512 -> 32)
@@ -132,7 +151,7 @@ int evaluate_nnue(Position* pos) {
     
     for(int i = 0; i < 32; i++) {
         l1_out[i] /= 255;
-        l1_out[i] = (l1_out[i] < 0) ? 0 : ((l1_out[i] > 255) ? 255 : l1_out[i]); // ReLU
+        l1_out[i] = clipped_leaky_relu(l1_out[i]);
     }
 
     // 3. Layer 2 (32 -> 32)
@@ -148,7 +167,7 @@ int evaluate_nnue(Position* pos) {
     
     for(int i = 0; i < 32; i++) {
         l2_out[i] /= 255;
-        l2_out[i] = (l2_out[i] < 0) ? 0 : ((l2_out[i] > 255) ? 255 : l2_out[i]); // ReLU
+        l2_out[i] = clipped_leaky_relu(l2_out[i]);
     }
 
     // 4. Output Layer (32 -> 1)
