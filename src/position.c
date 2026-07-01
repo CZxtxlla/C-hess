@@ -4,7 +4,7 @@
 #include "../include/magic.h"
 #include "../include/movegen.h"
 #include "../include/zobrist.h"
-#include "nnue/nnue.h"
+#include "../nnue/nnue.h"
 #include <stdio.h>
 #include <string.h>
 
